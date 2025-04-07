@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>身体数据</title>
+   <!-- 添加基础路径，兼容本地和线上环境 -->
+   <base href="/daily-health-app/">
+  <!-- 修正 CSS/JS 路径 -->
+  <link rel="stylesheet" href="css/styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/chart-loader.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+  <style>
+    /* 确保导航栏不覆盖内容 */
+    body { 
+      margin: 0;
+      padding-top: 70px; 
+    }
+    iframe { 
+      width: 100%;
+      height: 60px;
+      border: none;
+    }
+  </style>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
+</head>
+<body>
+  <!-- 嵌入公共导航栏 -->
+  <!-- 使用相对路径加载导航栏 -->
+  <iframe src="nav.html"></iframe>
+
+  <div class="form-container">
+    <h2>记录身体数据</h2>
+    <form onsubmit="saveBodyData(event)">
+      <div>
+        <label>体重（kg）:</label>
+        <input type="number" id="weight" step="0.1" min="20" max="300" required>
+      </div>
+      <div>
+        <label>睡眠时长（hh:mm）:</label>
+        <input type="text" id="sleep" placeholder="例如 7:30" required>
+      </div>
+      <button type="submit">保存</button>
+    </form>
+  </div>
+
+  <canvas id="bodyChart"></canvas>
+
+  <script>
+    // 保存身体数据（加密存储）
+    function saveBodyData(event) {
+      event.preventDefault(); // 阻止表单默认提交行为
+
+      const weight = parseFloat(document.getElementById('weight').value);
+      const sleep = document.getElementById('sleep').value;
+
+      // 输入验证
+      if (weight < 20 || weight > 300) {
+        alert('体重需在 20kg 至 300kg 之间！');
+        return;
+      }
+      if (!/^\d+:\d{2}$/.test(sleep)) {
+        alert('睡眠时长格式应为 hh:mm！');
+        return;
+      }
+      try {
+    // 输入验证和数据处理...
+    const data = {
+      date: new Date().toISOString().split('T')[0],
+      weight: encryptData(weight.toString(), 'health-key'),
+      sleep: encryptData(sleep, 'health-key')
+    };
+     // 存储到 LocalStorage
+     let history = JSON.parse(localStorage.getItem('bodyHistory') || '[]');
+      history.push(data);
+      localStorage.setItem('bodyHistory', JSON.stringify(history));
+  } catch (error) {
+    alert('保存失败，请检查输入数据！');
+    console.error('保存错误:', error);
+  }
+  renderChart();
+
+
+      // 加密数据
+      const data = {
+        date: new Date().toISOString().split('T')[0], // 取日期部分（如 2023-10-05）
+        weight: encryptData(weight.toString(), 'health-key'),
+        sleep: encryptData(sleep, 'health-key')
+      };
+
+     
+    }
+      renderChart(); // 更新图表
+    
+
+    // 渲染体重趋势图
+    function renderChart() {
+      const history = JSON.parse(localStorage.getItem('bodyHistory') || '[]');
+      const labels = history.map(item => item.date);
+      const weights = history.map(item => 
+        parseFloat(decryptData(item.weight, 'health-key'))
+      );
+
+      const chartData = {
+  labels: labels,    // X轴：日期数组
+  values: weights    // Y轴：体重数值数组
+};
+
+const bodyChart = initLineChart(
+  'bodyChart',      // 画布ID（必须与HTML中的canvas id一致）
+  chartData,        // 数据对象
+  '体重变化（kg）', // 图表标题
+  '#2196F3'         // 线条颜色（蓝色）
+);
+}
+
+
+    // 页面加载时渲染图表
+    window.onload = renderChart;
+  </script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>运动计时</title>
+  <!-- 添加基础路径，兼容本地和线上环境 -->
+  <base href="/daily-health-app/">
+  
+  <!-- 修正 CSS 路径 -->
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- 使用相对路径加载导航栏 -->
+  <iframe src="nav.html" width="100%" height="60px"></iframe>
+
+  <div class="form-container">
+    <h2>运动计时器</h2>
+    <div>
+      <select id="sportType">
+        <option value="yoga">瑜伽</option>
+        <option value="running">跑步</option>
+        <option value="cycling">骑行</option>
+      </select>
+      <button onclick="startTimer()">开始</button>
+      <button onclick="pauseTimer()">暂停</button>
+      <button onclick="resetTimer()">重置</button>
+    </div>
+    <p id="timerDisplay">00:00:00</p>
+  </div>
+
+  <div class="stats-container">
+    <h3>本周运动统计</h3>
+    <p>总时长：<span id="totalDuration">0</span> 分钟</p>
+  </div>
+
+  <script>
+    let timer = null;
+    let seconds = 0;
+    let isPaused = false;
+
+    // 开始计时（支持暂停后恢复）
+    function startTimer() {
+      if (timer && !isPaused) return;
+      isPaused = false;
+      timer = setInterval(() => {
+        seconds++;
+        updateDisplay();
+      }, 1000);
+    }
+
+    // 暂停计时
+    function pauseTimer() {
+      isPaused = true;
+      clearInterval(timer);
+      timer = null;
+    }
+
+    // 重置计时
+    function resetTimer() {
+      clearInterval(timer);
+      timer = null;
+      seconds = 0;
+      isPaused = false;
+      updateDisplay();
+    }
+
+    // 更新显示时间
+    function updateDisplay() {
+      const hours = Math.floor(seconds / 3600).toString().padStart(2, '0');
+      const minutes = Math.floor((seconds % 3600) / 60).toString().padStart(2, '0');
+      const secs = (seconds % 60).toString().padStart(2, '0');
+      document.getElementById('timerDisplay').textContent = `${hours}:${minutes}:${secs}`;
+    }
+
+    // 保存运动记录（在页面关闭或手动保存时调用）
+    window.addEventListener('beforeunload', () => {
+      if (seconds > 0) {
+        const sessions = JSON.parse(localStorage.getItem('sportSessions') || '[]');
+        sessions.push({
+          type: document.getElementById('sportType').value,
+          duration: seconds,
+          date: new Date().toISOString()
+        });
+        localStorage.setItem('sportSessions', JSON.stringify(sessions));
+        updateStats(); // 保存后更新统计
+      }
+    });
+
+    // 统计本周总时长（修复时间范围计算）
+    function updateStats() {
+      const sessions = JSON.parse(localStorage.getItem('sportSessions') || '[]');
+      const now = new Date();
+      // 克隆 now 对象避免污染
+      const weekStart = new Date(now);
+      weekStart.setDate(now.getDate() - now.getDay()); // 本周第一天（周日为起点）
+      weekStart.setHours(0, 0, 0, 0);
+
+      const thisWeekSessions = sessions.filter(session => {
+        const sessionDate = new Date(session.date);
+        return sessionDate >= weekStart;
+      });
+
+      const totalMinutes = thisWeekSessions.reduce((sum, s) => sum + Math.floor(s.duration / 60), 0);
+      document.getElementById('totalDuration').textContent = totalMinutes;
+    }
+
+    // 初始化统计
+    window.onload = updateStats;
+  </script>
+</body>
+</html>
